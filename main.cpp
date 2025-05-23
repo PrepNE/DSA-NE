@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <algorithm>
 #include <cctype>
+#include <limits>
+#include <sstream>
 
 using namespace std;
 
@@ -45,6 +47,11 @@ int findCityIndex(const string &name);
 bool cityExists(const string &name);
 bool roadExists(const string &city1, const string &city2);
 
+// Input validation helper functions
+int getValidInteger(const string& prompt, int minValue = INT_MIN, int maxValue = INT_MAX);
+long long getValidLongLong(const string& prompt, long long minValue = 0);
+void clearInputBuffer();
+
 int main() {
     initializeSystem();
     loadInitialData();
@@ -53,9 +60,7 @@ int main() {
 
     do {
         displayMainMenu();
-        cout << "Enter your choice (1-9): ";
-        cin >> choice;
-        cin.ignore();
+        choice = getValidInteger("Enter your choice (1-9): ", 1, 9);
 
         switch(choice) {
             case 1: addNewCities(); break;
@@ -75,6 +80,70 @@ int main() {
     } while(choice != 9);
 
     return 0;
+}
+
+// Input validation helper functions
+int getValidInteger(const string& prompt, int minValue, int maxValue) {
+    string input;
+    int value;
+    
+    while (true) {
+        cout << prompt;
+        getline(cin, input);
+        
+        // Check if input is empty
+        if (input.empty()) {
+            cout << "Error: Please enter a value.\n";
+            continue;
+        }
+        
+        // Try to convert string to integer
+        stringstream ss(input);
+        if (ss >> value && ss.eof()) {
+            // Check if value is within valid range
+            if (value >= minValue && value <= maxValue) {
+                return value;
+            } else {
+                cout << "Error: Please enter a number between " << minValue << " and " << maxValue << ".\n";
+            }
+        } else {
+            cout << "Error: Please enter a valid number.\n";
+        }
+    }
+}
+
+long long getValidLongLong(const string& prompt, long long minValue) {
+    string input;
+    long long value;
+    
+    while (true) {
+        cout << prompt;
+        getline(cin, input);
+        
+        // Check if input is empty
+        if (input.empty()) {
+            cout << "Error: Please enter a value.\n";
+            continue;
+        }
+        
+        // Try to convert string to long long
+        stringstream ss(input);
+        if (ss >> value && ss.eof()) {
+            // Check if value is within valid range
+            if (value >= minValue) {
+                return value;
+            } else {
+                cout << "Error: Please enter a number greater than or equal to " << minValue << ".\n";
+            }
+        } else {
+            cout << "Error: Please enter a valid number.\n";
+        }
+    }
+}
+
+void clearInputBuffer() {
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 void initializeSystem() {
@@ -132,15 +201,19 @@ void displayMainMenu() {
 }
 
 void addNewCities() {
-    int numberOfCities;
-    cout << "\nHow many new cities do you want to add? ";
-    cin >> numberOfCities;
-    cin.ignore();
+    int numberOfCities = getValidInteger("\nHow many new cities do you want to add? ", 1, 50);
 
     for (int i = 0; i < numberOfCities; i++) {
         string cityName;
         cout << "Enter Name of City " << (i + 1) << ": ";
         getline(cin, cityName);
+
+        // Check for empty input
+        if (cityName.empty()) {
+            cout << "Error: City name cannot be empty. Skipping...\n";
+            i--; // Retry this iteration
+            continue;
+        }
 
         // Check if city already exists
         if (cityExists(cityName)) {
@@ -159,12 +232,24 @@ void addNewCities() {
 
 void addNewRoads() {
     string city1, city2;
-    int choice;
 
     cout << "\nEnter first city name or index: ";
     getline(cin, city1);
+    
+    // Check for empty input
+    if (city1.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
+    
     cout << "Enter second city name or index: ";
     getline(cin, city2);
+    
+    // Check for empty input
+    if (city2.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
 
     int idx1 = findCityIndex(city1);
     int idx2 = findCityIndex(city2);
@@ -192,8 +277,7 @@ void addNewRoads() {
         cout << "Do you want to add a road? (1 for yes, 0 for no): ";
     }
 
-    cin >> choice;
-    cin.ignore();
+    int choice = getValidInteger("", 0, 1);
 
     if (choice == 1) {
         if (roadCurrentlyExists) {
@@ -227,12 +311,24 @@ void addNewRoads() {
 
 void assignBudget() {
     string city1, city2;
-    long long budget;
 
     cout << "\nEnter first city name or index: ";
     getline(cin, city1);
+    
+    // Check for empty input
+    if (city1.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
+    
     cout << "Enter second city name or index: ";
     getline(cin, city2);
+    
+    // Check for empty input
+    if (city2.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
 
     int idx1 = findCityIndex(city1);
     int idx2 = findCityIndex(city2);
@@ -253,14 +349,8 @@ void assignBudget() {
     city2 = getCityName(idx2);
 
     cout << "Current budget: " << budgetMatrix[idx1][idx2] << " RWF\n";
-    cout << "Enter new budget for road between " << city1 << " and " << city2 << " (in RWF): ";
-    cin >> budget;
-    cin.ignore();
-
-    if (budget < 0) {
-        cout << "Budget cannot be negative. Please enter a valid amount.\n";
-        return;
-    }
+    
+    long long budget = getValidLongLong("Enter new budget for road between " + city1 + " and " + city2 + " (in RWF): ", 0);
 
     budgetMatrix[idx1][idx2] = budget;
     budgetMatrix[idx2][idx1] = budget;
@@ -280,16 +370,25 @@ void editCity() {
     string input;
     cout << "\nEnter city index or name to edit: ";
     getline(cin, input);
+    
+    // Check for empty input
+    if (input.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
 
     int cityIndex = -1;
 
     // Check if input is a number
     if (!input.empty() && isdigit(input[0])) {
-        int index = stoi(input);
-        for (const auto &city: cities) {
-            if (city.index == index) {
-                cityIndex = city.index;
-                break;
+        stringstream ss(input);
+        int index;
+        if (ss >> index && ss.eof()) {
+            for (const auto &city: cities) {
+                if (city.index == index) {
+                    cityIndex = city.index;
+                    break;
+                }
             }
         }
     } else {
@@ -321,6 +420,12 @@ void editCity() {
     cout << "Enter new name: ";
     string newName;
     getline(cin, newName);
+    
+    // Check for empty input
+    if (newName.empty()) {
+        cout << "Error: City name cannot be empty.\n";
+        return;
+    }
 
     // Check if new name already exists (and it's not the same city)
     if (cityExists(newName) && newName != oldName) {
@@ -342,15 +447,24 @@ void searchCity() {
     string input;
     cout << "\nEnter city index or name to search: ";
     getline(cin, input);
+    
+    // Check for empty input
+    if (input.empty()) {
+        cout << "Error: City name/index cannot be empty.\n";
+        return;
+    }
 
     City* foundCity = nullptr;
 
     if(!input.empty() && isdigit(input[0])) {
-        int index = stoi(input);
-        for(auto& city : cities) {
-            if(city.index == index) {
-                foundCity = &city;
-                break;
+        stringstream ss(input);
+        int index;
+        if (ss >> index && ss.eof()) {
+            for(auto& city : cities) {
+                if(city.index == index) {
+                    foundCity = &city;
+                    break;
+                }
             }
         }
     } else {
@@ -499,10 +613,13 @@ void displayRoads() {
 int findCityIndex(const string &name) {
     // Check if input is a number
     if (!name.empty() && isdigit(name[0])) {
-        int index = stoi(name);
-        for (int i = 0; i < cities.size(); i++) {
-            if (cities[i].index == index) {
-                return i; // Return position in vector, not the city index
+        stringstream ss(name);
+        int index;
+        if (ss >> index && ss.eof()) {
+            for (int i = 0; i < cities.size(); i++) {
+                if (cities[i].index == index) {
+                    return i; // Return position in vector, not the city index
+                }
             }
         }
     } else {
